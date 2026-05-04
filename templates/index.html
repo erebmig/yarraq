@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VORTEX — YouTube Downloader</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080808;
+      --surface: #111111;
+      --border: #1e1e1e;
+      --accent: #e8ff00;
+      --accent2: #ff3c3c;
+      --text: #f0f0f0;
+      --muted: #555;
+      --mp3: #e8ff00;
+      --mp4: #ff3c3c;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Grid overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(232,255,0,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232,255,0,0.02) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* HEADER */
+    header {
+      padding: 48px 0 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+    }
+
+    .logo-icon {
+      width: 52px;
+      height: 52px;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+
+    .brand h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 64px;
+      letter-spacing: 4px;
+      line-height: 1;
+      color: var(--accent);
+    }
+
+    .brand p {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* DISCLAIMER */
+    .disclaimer {
+      margin-top: 20px;
+      padding: 12px 16px;
+      border: 1px solid #2a2a2a;
+      border-left: 3px solid var(--accent2);
+      background: rgba(255,60,60,0.04);
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: #888;
+      line-height: 1.6;
+    }
+
+    .disclaimer span { color: var(--accent2); font-weight: 500; }
+
+    /* MAIN CARD */
+    .card {
+      margin-top: 36px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      padding: 32px;
+      position: relative;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+
+    /* URL INPUT */
+    .input-group {
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--border);
+    }
+
+    .input-group:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+
+    .url-icon {
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      background: #161616;
+      border-right: 1px solid var(--border);
+    }
+
+    #urlInput {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      padding: 16px 16px;
+      min-width: 0;
+    }
+
+    #urlInput::placeholder { color: var(--muted); }
+
+    .paste-btn {
+      background: #161616;
+      border: none;
+      border-left: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      padding: 0 16px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: color 0.2s;
+    }
+
+    .paste-btn:hover { color: var(--accent); }
+
+    /* FORMAT TOGGLE */
+    .format-row {
+      margin-top: 20px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .fmt-btn {
+      flex: 1;
+      padding: 14px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 3px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .fmt-btn::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: currentColor;
+      transform: scaleX(0);
+      transition: transform 0.2s;
+    }
+
+    .fmt-btn.active::after { transform: scaleX(1); }
+
+    .fmt-btn[data-fmt="mp3"].active {
+      color: var(--mp3);
+      border-color: var(--mp3);
+      background: rgba(232,255,0,0.04);
+    }
+
+    .fmt-btn[data-fmt="mp4"].active {
+      color: var(--mp4);
+      border-color: var(--mp4);
+      background: rgba(255,60,60,0.04);
+    }
+
+    .fmt-btn svg { width: 20px; height: 20px; }
+
+    /* VIDEO PREVIEW */
+    #preview {
+      margin-top: 24px;
+      display: none;
+      gap: 16px;
+      align-items: flex-start;
+      border: 1px solid var(--border);
+      padding: 16px;
+      background: #0d0d0d;
+    }
+
+    #preview.visible { display: flex; }
+
+    #preview img {
+      width: 120px;
+      height: 68px;
+      object-fit: cover;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+    }
+
+    .preview-info { flex: 1; min-width: 0; }
+
+    .preview-title {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.4;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text);
+    }
+
+    .preview-meta {
+      margin-top: 6px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .preview-meta span {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .preview-meta span svg { width: 12px; height: 12px; }
+
+    /* DOWNLOAD BTN */
+    #downloadBtn {
+      margin-top: 20px;
+      width: 100%;
+      padding: 18px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #downloadBtn:disabled {
+      background: #1a1a1a;
+      color: var(--muted);
+      cursor: not-allowed;
+    }
+
+    #downloadBtn:not(:disabled):hover {
+      background: #fff;
+      transform: translateY(-1px);
+    }
+
+    #downloadBtn svg { width: 22px; height: 22px; }
+
+    /* PROGRESS */
+    .progress-wrap {
+      margin-top: 16px;
+      display: none;
+    }
+
+    .progress-wrap.visible { display: block; }
+
+    .progress-bar-bg {
+      height: 2px;
+      background: var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    .progress-bar-bg.indeterminate .progress-bar-fill {
+      width: 40%;
+      animation: indeterminate 1.2s ease-in-out infinite;
+    }
+
+    @keyframes indeterminate {
+      0% { transform: translateX(-200%); }
+      100% { transform: translateX(350%); }
+    }
+
+    .progress-label {
+      margin-top: 8px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    /* ERROR */
+    .error-box {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border: 1px solid var(--accent2);
+      background: rgba(255,60,60,0.06);
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--accent2);
+      display: none;
+    }
+
+    .error-box.visible { display: block; }
+
+    /* FOOTER */
+    footer {
+      margin-top: 60px;
+      padding: 32px 0 48px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: gap;
+      gap: 16px;
+    }
+
+    footer p {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    .footer-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 3px;
+      color: #2a2a2a;
+    }
+
+    /* Animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card { animation: fadeUp 0.5s ease both; }
+    .disclaimer { animation: fadeUp 0.4s ease 0.1s both; }
+    header { animation: fadeUp 0.4s ease 0s both; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <svg class="logo-icon" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="52" height="52" fill="#e8ff00" rx="2"/>
+      <path d="M14 26C14 19.373 19.373 14 26 14" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+      <path d="M38 26C38 32.627 32.627 38 26 38" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="26" cy="26" r="5" fill="#000"/>
+      <path d="M22 26L26 18L30 26" fill="#000"/>
+    </svg>
+    <div class="brand">
+      <h1>VORTEX</h1>
+      <p>YouTube Media Downloader · v2.0</p>
+    </div>
+  </header>
+
+  <div class="disclaimer">
+    <span>⚠ YASAL UYARI:</span> İndirilen içeriklerin telif hakkı tamamen kullanıcıya aittir.
+    Yalnızca telif hakkı bulunmayan veya kişisel kullanım izni olan içerikleri indirin.
+    Bu araç yalnızca kişisel, eğitim amaçlı kullanım içindir.
+  </div>
+
+  <div class="card">
+    <div class="input-group">
+      <div class="url-icon">
+        <!-- Link icon -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+      </div>
+      <input id="urlInput" type="text" placeholder="https://youtube.com/watch?v=..." autocomplete="off" spellcheck="false" />
+      <button class="paste-btn" onclick="pasteUrl()">YAPIŞTR</button>
+    </div>
+
+    <div class="format-row">
+      <button class="fmt-btn active" data-fmt="mp3" onclick="setFormat('mp3')">
+        <!-- Music note icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18V5l12-2v13"/>
+          <circle cx="6" cy="18" r="3"/>
+          <circle cx="18" cy="16" r="3"/>
+        </svg>
+        MP3
+      </button>
+      <button class="fmt-btn" data-fmt="mp4" onclick="setFormat('mp4')">
+        <!-- Video icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="23 7 16 12 23 17 23 7"/>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+        </svg>
+        MP4
+      </button>
+    </div>
+
+    <div id="preview">
+      <img id="thumbImg" src="" alt="thumbnail" />
+      <div class="preview-info">
+        <div class="preview-title" id="previewTitle"></div>
+        <div class="preview-meta">
+          <span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span id="previewDuration">—</span>
+          </span>
+          <span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span id="previewUploader">—</span>
+          </span>
+          <span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span id="previewViews">—</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar-bg indeterminate">
+        <div class="progress-bar-fill"></div>
+      </div>
+      <div class="progress-label" id="progressLabel">HAZIRLANYOR...</div>
+    </div>
+
+    <button id="downloadBtn" onclick="startDownload()">
+      <!-- Download icon -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      İNDİR
+    </button>
+  </div>
+
+  <footer>
+    <p>© 2024 VORTEX · Kişisel kullanım için üretilmiştir</p>
+    <div class="footer-logo">VORTEX</div>
+  </footer>
+
+</div>
+
+<script>
+  let selectedFormat = 'mp3';
+  let fetchTimeout = null;
+
+  function setFormat(fmt) {
+    selectedFormat = fmt;
+    document.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`[data-fmt="${fmt}"]`).classList.add('active');
+
+    const btn = document.getElementById('downloadBtn');
+    if (!btn.disabled) {
+      btn.style.background = fmt === 'mp3' ? 'var(--mp3)' : 'var(--mp4)';
+    }
+  }
+
+  async function pasteUrl() {
+    try {
+      const text = await navigator.clipboard.readText();
+      document.getElementById('urlInput').value = text;
+      fetchVideoInfo(text);
+    } catch {}
+  }
+
+  function formatDuration(s) {
+    if (!s) return '—';
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    return `${m}:${String(sec).padStart(2,'0')}`;
+  }
+
+  function formatViews(n) {
+    if (!n) return '—';
+    if (n >= 1e6) return (n/1e6).toFixed(1) + 'M görüntüleme';
+    if (n >= 1e3) return (n/1e3).toFixed(0) + 'K görüntüleme';
+    return n + ' görüntüleme';
+  }
+
+  async function fetchVideoInfo(url) {
+    if (!url || !url.includes('youtube')) return;
+    hideError();
+    try {
+      const res = await fetch('/api/info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+      if (data.error) return;
+
+      document.getElementById('thumbImg').src = data.thumbnail;
+      document.getElementById('previewTitle').textContent = data.title;
+      document.getElementById('previewDuration').textContent = formatDuration(data.duration);
+      document.getElementById('previewUploader').textContent = data.uploader || '—';
+      document.getElementById('previewViews').textContent = formatViews(data.view_count);
+
+      document.getElementById('preview').classList.add('visible');
+    } catch {}
+  }
+
+  document.getElementById('urlInput').addEventListener('input', (e) => {
+    clearTimeout(fetchTimeout);
+    fetchTimeout = setTimeout(() => fetchVideoInfo(e.target.value.trim()), 700);
+  });
+
+  function showError(msg) {
+    const box = document.getElementById('errorBox');
+    box.textContent = '✗ ' + msg;
+    box.classList.add('visible');
+  }
+
+  function hideError() {
+    document.getElementById('errorBox').classList.remove('visible');
+  }
+
+  function setLoading(on, label = 'HAZIRLANYOR...') {
+    const btn = document.getElementById('downloadBtn');
+    const wrap = document.getElementById('progressWrap');
+    const lbl = document.getElementById('progressLabel');
+    btn.disabled = on;
+    wrap.classList.toggle('visible', on);
+    lbl.textContent = label;
+    if (!on) {
+      btn.style.background = selectedFormat === 'mp3' ? 'var(--mp3)' : 'var(--mp4)';
+    } else {
+      btn.style.background = '';
+    }
+  }
+
+  async function startDownload() {
+    const url = document.getElementById('urlInput').value.trim();
+    if (!url) { showError('Lütfen bir YouTube URL\'si girin.'); return; }
+    hideError();
+    setLoading(true, 'İNDİRİLİYOR...');
+
+    try {
+      const res = await fetch('/api/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, format: selectedFormat })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Bir hata oluştu');
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get('Content-Disposition') || '';
+      let filename = `video.${selectedFormat}`;
+      const match = disposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';\n]+)/i);
+      if (match) filename = decodeURIComponent(match[1].replace(/['"]/g, ''));
+
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+
+      setLoading(false);
+    } catch (e) {
+      setLoading(false);
+      showError(e.message);
+    }
+  }
+</script>
+</body>
+</html>
